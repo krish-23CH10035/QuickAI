@@ -1,5 +1,9 @@
-import {neon} from '@neondatabase/serverless'
+import { neon } from '@neondatabase/serverless'
 
-const sql = neon(`${process.env.DATABASE_URL}`);
+if (!process.env.DATABASE_URL) {
+	throw new Error('Missing required environment variable: DATABASE_URL. Please set DATABASE_URL in your environment (e.g., Vercel Project Settings).');
+}
+
+const sql = neon(process.env.DATABASE_URL);
 
 export default sql;
