@@ -23,8 +23,13 @@ app.use(requireAuth())
 app.use('/api/ai', aiRouter)
 app.use('/api/user', userRouter);      
 
-const PORT = process.env.PORT || 3000;
+// Export the Express app for Vercel serverless functions
+export default app;
 
-app.listen(PORT, () => {
-    console.log('Server running on port', PORT);
-});
+// Only start server if running locally (not on Vercel)
+if (process.env.VERCEL !== '1') {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log('Server running on port', PORT);
+    });
+}

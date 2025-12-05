@@ -7,7 +7,6 @@ import FormData from 'form-data';
 import cloudinary from "../configs/cloudinary.js";
 // pdf-parse is imported dynamically inside the handler to avoid ESM export issues
 import { v2 as Cloudinary } from 'cloudinary';
-import fs from 'fs';
 import { createRequire } from 'module';
 
 // Create a custom require function
@@ -162,7 +161,9 @@ export const removeImageBackground = async(req, res) => {
     
     
 
-        const {secure_url} = await cloudinary.uploader.upload(image.path, {
+        // Convert buffer to data URI for Cloudinary (memory storage)
+        const dataUri = `data:${image.mimetype};base64,${image.buffer.toString('base64')}`;
+        const {secure_url} = await cloudinary.uploader.upload(dataUri, {
         transformation: [
         {
             effect: 'background_removal',
@@ -196,7 +197,9 @@ export const removeImageObject = async(req, res) => {
 
     // Upload original image and request an AI-based object removal transformation.
     // Use `eager` to create a transformed version on upload and return its URL.
-    const uploadResult = await cloudinary.uploader.upload(image.path, {
+    // Convert buffer to data URI for Cloudinary (memory storage)
+    const dataUri = `data:${image.mimetype};base64,${image.buffer.toString('base64')}`;
+    const uploadResult = await cloudinary.uploader.upload(dataUri, {
         resource_type: 'image',
         eager: [
             {
@@ -235,7 +238,8 @@ export const resumeReview = async(req, res) => {
         return res.json({ success: false, message: 'File size exceeds 5MB limit.' });
     }
 
-    const dataBuffer = fs.readFileSync(resume.path);
+    // With memory storage, file data is in buffer, not on disk
+    const dataBuffer = resume.buffer;
 
     // Determine the correct parser function exported by `pdf-parse`.
     // The package can be exported in different shapes depending on bundler/interop.
@@ -273,9 +277,12 @@ export const resumeReview = async(req, res) => {
         return res.json({ success: false, message: 'Server error: PDF parser not available.' });
     }
 
-    const prompt = `Review the following resume and provide constrauctive
+    // pdfData can be either an object with .text property (v1 API) or a string (v2 API)
+    const resumeText = typeof pdfData === 'string' ? pdfData : pdfData.text || '';
+    
+    const prompt = `Review the following resume and provide constructive
     feedback on its strengths, weaknesses, and areas for improvement. Resume
-    Content: \n\n${pdfData.text}`
+    Content: \n\n${resumeText}`
 
     const response = await AI.chat.completions.create({
         model: "gemini-2.0-flash",
