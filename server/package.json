@@ -4,6 +4,9 @@
   "description": "",
   "main": "server.js",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "server": "nodemon --exec \"node --env-file=.env\" server.js",
     "start": "node server.js"
