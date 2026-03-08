@@ -9,12 +9,13 @@ import { useAuth } from '@clerk/clerk-react'
 axios.defaults.baseURL = import.meta.env.VITE_BASE_URL;
 
 const TYPE_META = {
-  article:       { label: 'Articles',    icon: FileText, color: '#3B82F6', bg: 'rgba(59,130,246,0.15)'  },
-  'blog-title':  { label: 'Blog Titles', icon: Hash,     color: '#9333EA', bg: 'rgba(147,51,234,0.15)' },
-  image:         { label: 'Images',      icon: Image,    color: '#10B981', bg: 'rgba(16,185,129,0.15)'  },
-  'remove-bg':   { label: 'BG Removed',  icon: Scissors, color: '#F97316', bg: 'rgba(249,115,22,0.15)'  },
-  'remove-obj':  { label: 'Objects Removed', icon: Scissors, color: '#EF4444', bg: 'rgba(239,68,68,0.15)' },
-  'resume-review': { label: 'Resumes',   icon: FileText, color: '#14B8A6', bg: 'rgba(20,184,166,0.15)'  },
+  article:          { label: 'Articles',        icon: FileText, color: '#3B82F6', bg: 'rgba(59,130,246,0.15)'  },
+  'Blog-title':     { label: 'Blog Titles',      icon: Hash,     color: '#9333EA', bg: 'rgba(147,51,234,0.15)' },
+  'blog-title':     { label: 'Blog Titles',      icon: Hash,     color: '#9333EA', bg: 'rgba(147,51,234,0.15)' },
+  image:            { label: 'Images',           icon: Image,    color: '#10B981', bg: 'rgba(16,185,129,0.15)'  },
+  'remove-bg':      { label: 'BG Removed',       icon: Scissors, color: '#F97316', bg: 'rgba(249,115,22,0.15)'  },
+  'remove-obj':     { label: 'Objects Removed',  icon: Scissors, color: '#EF4444', bg: 'rgba(239,68,68,0.15)' },
+  'resume-review':  { label: 'Resume Reviews',   icon: FileText, color: '#14B8A6', bg: 'rgba(20,184,166,0.15)'  },
 }
 
 const Dashboard = () => {

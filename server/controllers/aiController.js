@@ -20,13 +20,111 @@ const pdfParse = require('pdf-parse');
 // const pdfData = await pdfParse(dataBuffer); // Note the name change to pdfParse
 
 
-
-
-
+// ── Groq (free, no credit card) — for text features ────────────────────────
 const AI = new OpenAI({
-    apiKey: process.env.GEMINI_API_KEY,
-    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
+    apiKey: process.env.GROQ_API_KEY,
+    baseURL: "https://api.groq.com/openai/v1",
 });
+
+// ── SSE Streaming — Article ──────────────────────────────────────────────────
+export const streamArticle = async (req, res) => {
+    try {
+        const { userId } = await req.auth();
+        const { prompt, length = 800 } = req.body;
+        const plan = req.plan;
+        const free_usage = req.free_usage;
+
+        if (plan !== 'premium' && free_usage >= 10) {
+            return res.json({ success: false, message: 'Free usage limit reached. Please upgrade to premium.' });
+        }
+
+        // SSE headers
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.flushHeaders();
+
+        const stream = await AI.chat.completions.create({
+            model: 'llama-3.3-70b-versatile',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.7,
+            max_tokens: length,
+            stream: true,
+        });
+
+        let fullContent = '';
+        for await (const chunk of stream) {
+            const token = chunk.choices[0]?.delta?.content || '';
+            if (token) {
+                fullContent += token;
+                res.write(`data: ${JSON.stringify({ token })}\n\n`);
+            }
+        }
+
+        // Save to DB
+        await sql`INSERT INTO creations (user_id, prompt, content, type) VALUES (${userId}, ${prompt}, ${fullContent}, 'article')`;
+
+        // Increment free usage if not premium
+        if (plan !== 'premium') {
+            await sql`UPDATE users SET credits = credits + 1 WHERE user_id = ${userId}`;
+        }
+
+        res.write('data: [DONE]\n\n');
+        res.end();
+    } catch (e) {
+        res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+        res.end();
+    }
+};
+
+// ── SSE Streaming — Blog Title ───────────────────────────────────────────────
+export const streamBlogTitle = async (req, res) => {
+    try {
+        const { userId } = await req.auth();
+        const { prompt } = req.body;
+        const plan = req.plan;
+        const free_usage = req.free_usage;
+
+        if (plan !== 'premium' && free_usage >= 10) {
+            return res.json({ success: false, message: 'Free usage limit reached. Please upgrade to premium.' });
+        }
+
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.flushHeaders();
+
+        const stream = await AI.chat.completions.create({
+            model: 'llama-3.3-70b-versatile',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.8,
+            max_tokens: 600,
+            stream: true,
+        });
+
+        let fullContent = '';
+        for await (const chunk of stream) {
+            const token = chunk.choices[0]?.delta?.content || '';
+            if (token) {
+                fullContent += token;
+                res.write(`data: ${JSON.stringify({ token })}\n\n`);
+            }
+        }
+
+        await sql`INSERT INTO creations (user_id, prompt, content, type) VALUES (${userId}, ${prompt}, ${fullContent}, 'Blog-title')`;
+        if (plan !== 'premium') {
+            await sql`UPDATE users SET credits = credits + 1 WHERE user_id = ${userId}`;
+        }
+
+        res.write('data: [DONE]\n\n');
+        res.end();
+    } catch (e) {
+        res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+        res.end();
+    }
+};
 
 export const generateArticle = async(req, res) => {
     try {
@@ -40,7 +138,7 @@ export const generateArticle = async(req, res) => {
         }
 
         const response = await AI.chat.completions.create({
-        model: "gemini-2.0-flash",
+        model: "llama-3.3-70b-versatile",
         messages: [
             {
                 role: "user",
@@ -82,7 +180,7 @@ export const generateBlogTitle = async(req, res) => {
         }
 
         const response = await AI.chat.completions.create({
-        model: "gemini-2.0-flash",
+        model: "llama-3.3-70b-versatile",
         messages: [
             {
                 role: "user",
@@ -185,7 +283,7 @@ export const removeImageBackground = async(req, res) => {
 
 export const removeImageObject = async(req, res) => {
     try {
-        const { userId } = req.auth();
+    const { userId } = await req.auth();
         const { object } = req.body;
         const image = req.file;
         const plan = req.plan;
@@ -225,7 +323,7 @@ export const removeImageObject = async(req, res) => {
 
 export const resumeReview = async(req, res) => {
     try {
-        const { userId } = req.auth();
+        const { userId } = await req.auth();
         const resume = req.file;
         const plan = req.plan;
 
@@ -285,7 +383,7 @@ export const resumeReview = async(req, res) => {
     Content: \n\n${resumeText}`
 
     const response = await AI.chat.completions.create({
-        model: "gemini-2.0-flash",
+        model: "llama-3.3-70b-versatile",
         messages: [
             {
                 role: "user",

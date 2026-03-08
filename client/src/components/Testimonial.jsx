@@ -1,58 +1,81 @@
-import { assets } from '../assets/assets'
+import React from 'react'
+import { Star, Quote } from 'lucide-react'
 
-const Testimonial = () => {
-    const dummyTestimonialData = [
-        {
-            image: "https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=200",
-            name: 'John Doe',
-            title: 'Marketing Director, TechCorp',
-            content: 'ContentAI has revolutionized our content workflow. The quality of the articles is outstanding, and it saves us hours of work every week.',
-            rating: 4,
-        },
-        {
-            image: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200",
-            name: 'Jane Smith',
-            title: 'Content Creator, TechCorp',
-            content: 'ContentAI has made our content creation process effortless. The AI tools have helped us produce high-quality content faster than ever before.',
-            rating: 5,
-        },
-        {
-            image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=200&h=200&auto=format&fit=crop",
-            name: 'David Lee',
-            title: 'Content Writer, TechCorp',
-            content: 'ContentAI has transformed our content creation process. The AI tools have helped us produce high-quality content faster than ever before.',
-            rating: 4,
-        },
-    ]
+const reviews = [
+  {
+    image: 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=200',
+    name: 'Arjun Sharma',
+    title: 'Marketing Lead, TechCorp',
+    content: 'NovaMind AI has revolutionized our content workflow. The article quality is outstanding, and it saves us hours every week.',
+    rating: 5,
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200',
+    name: 'Priya Mehta',
+    title: 'Freelance Designer, StartupLab',
+    content: 'The background removal is flawless — what used to take me 20 minutes in Photoshop takes 2 seconds here. Mind-blowing.',
+    rating: 5,
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=200&h=200&auto=format&fit=crop',
+    name: 'Dev Kumar',
+    title: 'Software Engineer, MediaHouse',
+    content: 'The resume reviewer gave me super actionable feedback. Rewrote my resume based on the AI suggestions and landed 3 interviews.',
+    rating: 5,
+  },
+]
 
-    return (
-        <div className='px-4 sm:px-20 xl:px-32 py-24'>
-            <div className='text-center'>
-                <h2 className='text-slate-700 text-[42px] font-semibold'>Loved by Creators</h2>
-                <p className='text-gray-500 max-w-lg mx-auto'>Don't just take our word for it. Here's what our users are saying.</p>
+const Testimonial = () => (
+  <section className='px-4 sm:px-20 xl:px-32 py-24'>
+    {/* Header */}
+    <div className='text-center mb-14'>
+      <div className='inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold mb-5'
+        style={{ background: 'rgba(250,204,21,0.1)', border: '1px solid rgba(250,204,21,0.25)', color: '#FCD34D' }}>
+        ★ Loved by thousands
+      </div>
+      <h2 className='text-4xl sm:text-5xl font-bold' style={{ color: '#F1F5F9' }}>
+        Real People, Real Results
+      </h2>
+      <p className='mt-4 max-w-md mx-auto text-base' style={{ color: 'rgba(255,255,255,0.4)' }}>
+        Join thousands of creators who use NovaMind AI every day.
+      </p>
+    </div>
+
+    {/* Cards */}
+    <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-5xl mx-auto'>
+      {reviews.map((r, i) => (
+        <div key={i}
+          className='relative p-7 rounded-2xl transition-all duration-300 hover:-translate-y-1 flex flex-col'
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+
+          {/* Quote icon */}
+          <Quote className='w-6 h-6 mb-4 opacity-30' style={{ color: '#A78BFA' }} />
+
+          {/* Stars */}
+          <div className='flex gap-1 mb-4'>
+            {[...Array(r.rating)].map((_, j) => (
+              <Star key={j} className='w-4 h-4 fill-yellow-400 text-yellow-400' />
+            ))}
+          </div>
+
+          <p className='text-sm leading-relaxed flex-1 mb-6' style={{ color: 'rgba(255,255,255,0.6)' }}>
+            "{r.content}"
+          </p>
+
+          <div className='flex items-center gap-3 pt-5'
+            style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+            <img src={r.image} alt={r.name}
+              className='w-10 h-10 rounded-full object-cover ring-2'
+              style={{ ringColor: 'rgba(124,58,237,0.4)' }} />
+            <div>
+              <p className='text-sm font-semibold' style={{ color: '#F1F5F9' }}>{r.name}</p>
+              <p className='text-xs' style={{ color: 'rgba(255,255,255,0.3)' }}>{r.title}</p>
             </div>
-            <div className='flex flex-wrap mt-10 justify-center'>
-                {dummyTestimonialData.map((testimonial, index) => (
-                    <div key={index} className='p-8 m-4 max-w-xs rounded-lg bg-[#FDFDFE] shadow-lg border border-gray-100 hover:-translate-y-1 transition duration-300 cursor-pointer'>
-                        <div className="flex items-center gap-1">
-                            {Array(5).fill(0).map((_, index)=>(<img key ={index}
-                            src={index<testimonial.rating ? assets.star_icon :
-                            assets.star_dull_icon} className='w-4 h-4' alt ="star"/>))}
-                        </div>
-                        <p className='text-gray-500 text-sm my-5'>"{testimonial.content}"</p>
-                        <hr className='mb-5 border-gray-300' />
-                        <div className='flex items-center gap-4'>
-                            <img src={testimonial.image} className='w-12 object-contain rounded-full' alt='' />
-                            <div className='text-sm text-gray-600'>
-                                <h3 className='font-medium'>{testimonial.name}</h3>
-                                <p className='text-xs text-gray-500'>{testimonial.title}</p>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
+          </div>
         </div>
-    )
-}
+      ))}
+    </div>
+  </section>
+)
 
 export default Testimonial

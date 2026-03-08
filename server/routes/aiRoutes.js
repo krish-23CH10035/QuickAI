@@ -1,5 +1,5 @@
 import express from 'express';
-import { generateArticle, generateBlogTitle, generateImage } from '../controllers/aiController.js';
+import { generateArticle, generateBlogTitle, generateImage, streamArticle, streamBlogTitle } from '../controllers/aiController.js';
 import { auth } from '../middlewares/auth.js';
 import { removeImageBackground, removeImageObject, resumeReview } from '../controllers/aiController.js';
 import { upload } from '../configs/multer.js'; 
@@ -14,6 +14,9 @@ aiRouter.post('/generate-image', auth, generateImage)
 aiRouter.post('/remove-image-background', upload.single('image'), auth,removeImageBackground)
 aiRouter.post('/remove-image-object', upload.single('image'), auth,removeImageObject)
 aiRouter.post('/resume-review', upload.single('resume'), auth, resumeReview)
+// Streaming routes
+aiRouter.post('/stream-article', auth, streamArticle)
+aiRouter.post('/stream-blog-title', auth, streamBlogTitle)
 
 
 export default aiRouter;

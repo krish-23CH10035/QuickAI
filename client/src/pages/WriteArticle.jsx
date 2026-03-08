@@ -1,137 +1,255 @@
-import { Sparkle, Edit } from 'lucide-react'
-import React from 'react'
-import { useState } from 'react'
-import axios from 'axios'
+import { Sparkle, Edit, Copy, Download, Check, FileDown } from 'lucide-react'
+import React, { useState, useRef } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import toast from 'react-hot-toast'
 import Markdown from 'react-markdown'
+import jsPDF from 'jspdf'
 
-
-
-axios.defaults.baseURL = import.meta.env.VITE_BASE_URL;
+const BASE = import.meta.env.VITE_BASE_URL
 
 const WriteArticle = () => {
-
-  const articleLength=[
-    {length:800, text: 'Short (500-800 words)'},
-    {length:1200, text: 'Medium (800-1200 words)'},
-    {length:1600, text: 'Long (1200+ words)'}
+  const articleLength = [
+    { length: 800,  text: 'Short (500-800 words)'  },
+    { length: 1200, text: 'Medium (800-1200 words)' },
+    { length: 1600, text: 'Long (1200+ words)'      },
   ]
 
+  const [selectedLength, setSelectedLength] = useState(articleLength[0])
+  const [input, setInput]       = useState('')
+  const [loading, setLoading]   = useState(false)
+  const [content, setContent]   = useState('')
+  const [copied, setCopied]     = useState(false)
+  const [streaming, setStreaming] = useState(false)
+  const articleRef = useRef(null)
+  const { getToken } = useAuth()
 
-
-  const[selectedLength, setSelectedLength] = useState(articleLength[0])
-  const[input, setInput] = useState('')
-  const[loading, setLoading] = useState(false)
-  const[content, setContent] = useState('')
-  
-  const {getToken} = useAuth()
-
+  /* ── SSE Streaming ───────────────────────────────────────────── */
   const onSubmitHandler = async (e) => {
-    e.preventDefault();
-    try{
-      setLoading(true)
+    e.preventDefault()
+    if (!input.trim()) return
+    setContent('')
+    setLoading(true)
+    setStreaming(true)
+
+    try {
+      const token = await getToken()
       const prompt = `Write an article about ${input} in ${selectedLength.text}`
 
-      const {data} = await axios.post('/api/ai/generate-article', {
-        prompt,
-        length: selectedLength.length
-    }, {
-      headers: {
-        Authorization: `Bearer ${await getToken()}`
+      const response = await fetch(`${BASE}/api/ai/stream-article`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ prompt, length: selectedLength.length }),
+      })
+
+      if (!response.ok) throw new Error('Streaming failed')
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let accumulated = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const raw = decoder.decode(value, { stream: true })
+        const lines = raw.split('\n')
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const payload = line.slice(6)
+          if (payload === '[DONE]') break
+          try {
+            const parsed = JSON.parse(payload)
+            if (parsed.error) { toast.error(parsed.error); break }
+            if (parsed.token) {
+              accumulated += parsed.token
+              setContent(accumulated)
+            }
+          } catch { /* partial chunk */ }
+        }
       }
-    })
-
-    if(data.success){
-    setContent(data.content);
-    }else{
-      toast.error(data.message)
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setLoading(false)
+      setStreaming(false)
     }
-    setLoading(false);
-    }catch(error){
-      toast.error(error.message)
-   
-    }
-    setLoading(false)
   }
-   
+
+  /* ── Copy ─────────────────────────────────────────────────────── */
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopied(true)
+      toast.success('Copied to clipboard!')
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('Copy failed')
+    }
+  }
+
+  /* ── Download TXT ─────────────────────────────────────────────── */
+  const handleDownload = () => {
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href = url; a.download = 'article.txt'; a.click()
+    URL.revokeObjectURL(url)
+    toast.success('Downloaded article.txt')
+  }
+
+  /* ── Export PDF ───────────────────────────────────────────────── */
+  const handleExportPDF = async () => {
+    if (!content) return
+    toast.loading('Generating PDF…', { id: 'pdf' })
+    try {
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+
+      // Title
+      doc.setFontSize(20)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(60, 20, 120)
+      doc.text('NovaMind AI — Generated Article', 15, 20)
+
+      // Subtitle
+      doc.setFontSize(11)
+      doc.setFont('helvetica', 'italic')
+      doc.setTextColor(100, 100, 120)
+      doc.text(`Topic: ${input}`, 15, 30)
+      doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 15, 37)
+
+      // Divider
+      doc.setDrawColor(124, 58, 237)
+      doc.setLineWidth(0.5)
+      doc.line(15, 41, 195, 41)
+
+      // Body text (strip markdown)
+      const plainText = content
+        .replace(/#{1,6}\s*/g, '')
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/\*(.*?)\*/g, '$1')
+        .replace(/`(.*?)`/g, '$1')
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(11)
+      doc.setTextColor(30, 30, 30)
+      const lines = doc.splitTextToSize(plainText, 175)
+      doc.text(lines, 15, 50)
+
+      // Footer
+      const pageCount = doc.internal.getNumberOfPages()
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i)
+        doc.setFontSize(8)
+        doc.setTextColor(150)
+        doc.text(`Generated by NovaMind AI  •  Page ${i} of ${pageCount}`, 15, 290)
+      }
+
+      doc.save(`article-${Date.now()}.pdf`)
+      toast.success('PDF exported!', { id: 'pdf' })
+    } catch (err) {
+      toast.error('PDF export failed', { id: 'pdf' })
+    }
+  }
+
   return (
-    <div className='h-full overflow-y-scroll p-6 flex items-start flex-wrap gap-4
-    text-slate-700'>
-      {/*left col */}
-      <form onSubmit={onSubmitHandler} className='w-full max-w-lg p-4 bg-white rounded-lg border
-      border-gray-200'>
-        <div className='flex items-center gap-3'>
-          <Sparkle className='w-6 text-[#4A7AFF]'/>
-          <h1 className='text-xl font-semibold'>Article Configuration</h1>
+    <div className='h-full overflow-y-auto p-6 flex items-start flex-wrap gap-4'>
+
+      {/* ── Left: Config Panel ── */}
+      <form onSubmit={onSubmitHandler} className='glass w-full max-w-lg p-5'>
+        <div className='flex items-center gap-3 mb-5'>
+          <Sparkle className='w-6 h-6' style={{ color: '#A78BFA' }} />
+          <h1 className='text-xl font-semibold' style={{ color: '#E2E8F0' }}>Article Configuration</h1>
+          {streaming && (
+            <span className='ml-auto text-xs px-2 py-0.5 rounded-full animate-pulse'
+              style={{ background: 'rgba(124,58,237,0.2)', color: '#A78BFA', border: '1px solid rgba(124,58,237,0.4)' }}>
+              ● LIVE
+            </span>
+          )}
         </div>
-        <p className='mt-6 text-sm font-medium'>Article Topic</p>
 
-        <input onChange={(e) => setInput(e.target.value)} value={input} type="text"  className='w-full p-2 px-3 mt-2 outline-none text-sm
-        rounded-md border border-gray-300' placeholder='The future of artificial intelligence is...
-        '/>
+        <label className='block text-xs font-semibold mb-1.5'
+          style={{ color: 'rgba(255,255,255,0.45)', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+          Article Topic
+        </label>
+        <input
+          onChange={e => setInput(e.target.value)} value={input} type='text' required
+          className='w-full p-2.5 px-3 text-sm rounded-xl outline-none'
+          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#E2E8F0' }}
+          placeholder='The future of artificial intelligence…'
+        />
 
-        <p className='mt-4 text-sm font-medium'>Article Length</p>
-
-        <div className='mt-3 flex gap-3 flex-wrap sm:max-w-[90%]'>
-          {articleLength.map((item, index) => (
-            <span onClick={() => setSelectedLength(item)}
-              className={`px-4 py-2 text-sm border rounded-full cursor-pointer ${selectedLength.text === item.text ? 'bg-blue-50 text-blue-700' : 
-              'text-gray-500 border-gray-300'}`}
-              key={index}
-            >
+        <label className='block text-xs font-semibold mt-4 mb-2'
+          style={{ color: 'rgba(255,255,255,0.45)', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+          Article Length
+        </label>
+        <div className='flex gap-2 flex-wrap'>
+          {articleLength.map((item, i) => (
+            <span key={i} onClick={() => setSelectedLength(item)}
+              className='px-4 py-2 text-sm rounded-full cursor-pointer transition-all'
+              style={selectedLength.text === item.text
+                ? { background: 'rgba(124,58,237,0.25)', border: '1px solid rgba(124,58,237,0.6)', color: '#A78BFA' }
+                : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}>
               {item.text}
             </span>
           ))}
         </div>
 
-        <br />
-        <button disabled={loading} className='w-full flex justify-center items-center gap-2
-        bg-gradient-to-r from-[#226BFF] to-[#65ADFF] text-white px-4 py-2 mt-6
-        text-sm rounded-lg cursor-pointer'>
-          {
-            loading ? <span className="w-4 h-4 my-1 rounded-full border-2
-            border-t-transparent animate-spin"></span> 
-            : <Edit className="w-5"/>
-          }
-          Generate article
+        <button disabled={loading}
+          className='btn-glow w-full flex justify-center items-center gap-2 px-4 py-2.5 mt-6 text-sm cursor-pointer disabled:opacity-60'>
+          {loading ? <span className='spinner' /> : <Edit className='w-4 h-4' />}
+          {streaming ? 'Streaming…' : 'Generate Article'}
         </button>
-
       </form>
-      {/*right col */}
-      <div className='w-full max-w-lg p-4 bg-white rounded-lg flex flex-col border
-      border-gray-200 min-h-96 max-h-[600px]'>
-        <div className='flex items-center gap-3'>
-          <Edit className='w-5 h-5 text-[#4A7AFF]'/>
-          <h1 className='text-xl font-semibold'>Generated article</h1>
 
-        </div>
-
-        {!content ?(
-          <div className='flex-1 flex justify-center items-center'>
-          <div className='text-sm flex flex-col items-center gap-5
-          text-gray-400'>
-            <Edit className='w-9 h-9'/>
-            <p>Enter a topic and click "Generate article" to get started</p>
-
+      {/* ── Right: Output Panel ── */}
+      <div className='glass w-full max-w-lg p-5 flex flex-col min-h-96 max-h-[600px]'>
+        <div className='flex items-center justify-between gap-3 mb-3'>
+          <div className='flex items-center gap-2'>
+            <Edit className='w-5 h-5' style={{ color: '#A78BFA' }} />
+            <h1 className='text-xl font-semibold' style={{ color: '#E2E8F0' }}>Generated Article</h1>
           </div>
-
+          {content && (
+            <div className='flex gap-2'>
+              <button onClick={handleCopy} title='Copy'
+                className='flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg'
+                style={{ background: 'rgba(124,58,237,0.18)', border: '1px solid rgba(124,58,237,0.4)', color: '#A78BFA' }}>
+                {copied ? <Check className='w-3.5 h-3.5' /> : <Copy className='w-3.5 h-3.5' />}
+                {copied ? 'Copied' : 'Copy'}
+              </button>
+              <button onClick={handleDownload} title='Download TXT'
+                className='flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg'
+                style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.4)', color: '#34D399' }}>
+                <Download className='w-3.5 h-3.5' /> TXT
+              </button>
+              <button onClick={handleExportPDF} title='Export PDF'
+                className='flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg'
+                style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#F87171' }}>
+                <FileDown className='w-3.5 h-3.5' /> PDF
+              </button>
+            </div>
+          )}
         </div>
 
-        ) : (
-          <div className='mt-3 h-full overflow-y-scroll text-sm text-slate-600'>
-            <div className='reset-tw'>
-            <Markdown>
-              {content}
-            </Markdown>
+        {!content ? (
+          <div className='flex-1 flex justify-center items-center'>
+            <div className='text-sm flex flex-col items-center gap-4' style={{ color: 'rgba(255,255,255,0.2)' }}>
+              <Edit className='w-9 h-9' />
+              <p>Enter a topic and click "Generate Article" to get started</p>
+              <p className='text-xs' style={{ color: 'rgba(124,58,237,0.5)' }}>⚡ Real-time streaming — watch words appear as they're written</p>
             </div>
           </div>
+        ) : (
+          <div ref={articleRef} className='flex-1 overflow-y-auto text-sm' style={{ color: '#CBD5E1' }}>
+            <div className='reset-tw'>
+              <Markdown>{content}</Markdown>
+            </div>
+            {streaming && <span className='inline-block w-1.5 h-4 bg-purple-400 animate-pulse ml-0.5 align-middle' />}
+          </div>
         )}
-
-        
-
       </div>
-        
     </div>
   )
 }

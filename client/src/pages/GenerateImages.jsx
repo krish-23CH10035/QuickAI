@@ -1,137 +1,126 @@
-import React from 'react'
-import { useState } from 'react'
-import { Sparkles, Image } from 'lucide-react'
+import React, { useState } from 'react'
+import { Sparkles, Image, Download } from 'lucide-react'
 import axios from 'axios'
 import { useAuth } from '@clerk/clerk-react'
 import toast from 'react-hot-toast'
 
 axios.defaults.baseURL = import.meta.env.VITE_BASE_URL;
 
+const imageStyles = [
+  'Realistic', 'Cartoon', 'Anime', 'Ghibli',
+  'Fantasy', '3D', 'Portrait', 'Watercolor',
+]
 
 const GenerateImages = () => {
 
-    const imageStyle=[
-        'Realistic',
-        'Cartoon style',
-        'Anime style',
-        'Ghibli style',
-        'fantasy style',
-        'Realistic style',
-        '3D style',
-        'Portrait style',
-  ]
+  const [selectedStyle, setSelectedStyle] = useState('Realistic')
+  const [input, setInput]     = useState('')
+  const [publish, setPublish] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [content, setContent] = useState('')
 
-  const[selectedStyle, setSelectedStyle] = useState('Realistic')
-  const[input, setInput] = useState('')
-  const[publish, setPublish] = useState(false)
-  const[loading, setLoading] = useState(false)
-  const[content, setContent] = useState('')
-  
-  const {getToken} = useAuth()
+  const { getToken } = useAuth()
 
   const onSubmitHandler = async (e) => {
     e.preventDefault()
     try {
       setLoading(true)
       const prompt = `Generate an image of ${input} in the style ${selectedStyle}`
-
-      const {data} = await axios.post('/api/ai/generate-image', {prompt, publish}, 
-      {headers: {
-        Authorization: `Bearer ${await getToken()}`
-      }})
-      if(data.success){
+      const { data } = await axios.post('/api/ai/generate-image', { prompt, publish }, {
+        headers: { Authorization: `Bearer ${await getToken()}` }
+      })
+      if (data.success) {
         setContent(data.content)
-      }else{
+      } else {
         toast.error(data.message)
       }
     } catch (error) {
       toast.error(error.message)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
-    <div className='h-full overflow-y-scroll p-6 flex items-start flex-wrap gap-4
-    text-slate-700'>
-      {/*left col */}
-      <form onSubmit={onSubmitHandler} className='w-full max-w-lg p-4 bg-white rounded-lg border
-      border-gray-200'>
-        <div className='flex items-center gap-3'>
-          <Sparkles className='w-6 text-[#00AD25]'/>
-          <h1 className='text-xl font-semibold'>AI Image Generator</h1>
+    <div className='h-full overflow-y-auto p-6 flex items-start flex-wrap gap-4'>
+
+      {/* ── Left: Config Panel ── */}
+      <form onSubmit={onSubmitHandler} className='glass w-full max-w-lg p-5'>
+        <div className='flex items-center gap-3 mb-5'>
+          <Sparkles className='w-6 h-6' style={{ color: '#34D399' }} />
+          <h1 className='text-xl font-semibold' style={{ color: '#E2E8F0' }}>AI Image Generator</h1>
         </div>
-        <p className='mt-6 text-sm font-medium'>Describe Your Image</p>
 
-        <textarea onChange={(e) => setInput(e.target.value)} value={input} rows="4" className='w-full p-2 px-3 mt-2 outline-none text-sm
-        rounded-md border border-gray-300' placeholder='Describe what you want to see in the image... 
-        ' required/>
+        <label className='block text-xs font-semibold mb-1.5'
+          style={{ color: 'rgba(255,255,255,0.45)', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+          Describe Your Image
+        </label>
+        <textarea
+          onChange={e => setInput(e.target.value)} value={input} rows={4} required
+          className='w-full p-2.5 px-3 text-sm rounded-xl outline-none resize-none'
+          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#E2E8F0' }}
+          placeholder='A futuristic city skyline at sunset...'
+        />
 
-        <p className='mt-4 text-sm font-medium'>Style</p>
-
-        <div className='mt-3 flex gap-3 flex-wrap sm:max-w-[90%]'>
-          {imageStyle.map((item, index) => (
-            <span onClick={() => setSelectedStyle(item)}
-              className={`px-4 py-2 text-sm border rounded-full cursor-pointer ${selectedStyle === item? 'bg-green-50 text-green-700' : 
-              'text-gray-500 border-gray-300'}`}
-              key={index}
-            >
-              {item}
+        <label className='block text-xs font-semibold mt-4 mb-2'
+          style={{ color: 'rgba(255,255,255,0.45)', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+          Style
+        </label>
+        <div className='flex flex-wrap gap-2 mb-4'>
+          {imageStyles.map((s, i) => (
+            <span key={i} onClick={() => setSelectedStyle(s)}
+              className='px-3 py-1.5 text-sm rounded-full cursor-pointer transition-all'
+              style={selectedStyle === s
+                ? { background: 'rgba(52,211,153,0.2)', border: '1px solid rgba(52,211,153,0.55)', color: '#34D399' }
+                : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}>
+              {s}
             </span>
           ))}
         </div>
 
-        <div className='my-6 flex items-center gap-2'>
+        {/* Public toggle */}
+        <div className='flex items-center gap-3 my-4'>
           <label className='relative cursor-pointer'>
-            <input type="checkbox" checked={publish} onChange={(e) => setPublish(e.target.checked)}
-            className='sr-only peer' />
-            <div className='w-9 h-5 bg-slate-300 rounded-full
-            peer-checked:bg-green-500 transition'></div>
-
-            <span className='absolute left-1 top-1 w-3 h-3 bg-white
-            rounded-full transition peer-checked:translate-x-4'></span>
+            <input type="checkbox" checked={publish} onChange={e => setPublish(e.target.checked)} className='sr-only peer' />
+            <div className='w-9 h-5 rounded-full transition peer-checked:bg-[#34D399]'
+              style={{ background: 'rgba(255,255,255,0.15)' }} />
+            <span className='absolute left-1 top-1 w-3 h-3 bg-white rounded-full transition peer-checked:translate-x-4' />
           </label>
-          <p className='text-sm'>Make this image public</p>
-            
-
+          <p className='text-sm' style={{ color: 'rgba(255,255,255,0.6)' }}>Make this image public</p>
         </div>
-        <button disabled={loading} className='w-full flex justify-center items-center gap-2
-        bg-gradient-to-r from-[#00AD25] to-[#04FF50] text-white px-4 py-2 mt-6
-        text-sm rounded-lg cursor-pointer'>
-          {loading ? <span className='w-4 h-4 my-1 rounded-full border-2
-          border-t-transparent animate-spin'></span> :
-          <Image className="w-5"/>
-          }
-          Generate image
+
+        <button disabled={loading}
+          className='btn-glow w-full flex justify-center items-center gap-2 px-4 py-2.5 text-sm cursor-pointer'
+          style={{ background: 'linear-gradient(135deg,#059669,#0891B2)' }}>
+          {loading ? <span className='spinner' /> : <Image className='w-4 h-4' />}
+          Generate Image
         </button>
-
       </form>
-      {/*right col */}
-      <div className='w-full max-w-lg p-4 bg-white rounded-lg flex flex-col border
-      border-gray-200 min-h-96'>
-        <div className='flex items-center gap-3'>
-          <Image className='w-5 h-5 text-[#00AD25]'/>
-          <h1 className='text-xl font-semibold'>Generated image</h1>
 
+      {/* ── Right: Output Panel ── */}
+      <div className='glass w-full max-w-lg p-5 flex flex-col min-h-96'>
+        <div className='flex items-center gap-2 mb-3'>
+          <Image className='w-5 h-5' style={{ color: '#34D399' }} />
+          <h1 className='text-xl font-semibold' style={{ color: '#E2E8F0' }}>Generated Image</h1>
         </div>
-        { !content ? (
-        <div className='flex-1 flex justify-center items-center'>
-          <div className='text-sm flex flex-col items-center gap-5
-          text-gray-400'>
-            <Image className='w-9 h-9'/>
-            <p>Enter a topic and click "Generate image" to get started</p>
-
+        {!content ? (
+          <div className='flex-1 flex justify-center items-center'>
+            <div className='text-sm flex flex-col items-center gap-4' style={{ color: 'rgba(255,255,255,0.2)' }}>
+              <Image className='w-9 h-9' />
+              <p>Enter a description and click "Generate Image" to get started</p>
+            </div>
           </div>
-
-        </div>
-        ):(
-          <div className='mt-3 h-full'>
-            <img src={content} alt="image" className='w-full h-full' />
+        ) : (
+          <div className='flex-1 flex flex-col gap-3'>
+            <img src={content} alt="Generated" className='w-full rounded-xl' />
+            <a href={content} target='_blank' rel='noopener noreferrer'
+              className='flex items-center justify-center gap-1.5 py-2 text-xs rounded-lg transition-all'
+              style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.4)', color: '#34D399' }}>
+              <Download className='w-3.5 h-3.5' /> Open / Download Image
+            </a>
           </div>
-        )
-        }
-
+        )}
       </div>
-        
     </div>
   )
 }

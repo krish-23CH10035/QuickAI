@@ -1,19 +1,63 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
 @import "tailwindcss";
 
-
-*{
+* {
   font-family: "Outfit", sans-serif;
 }
 
-@theme{
-  --color-primary: #5044E5;
+@theme {
+  --color-primary: #7C3AED;
 }
 
-.reset-tw, .reset-tw *{
+/* ── Dark Background ── */
+body {
+  background: #0D0D1A;
+  color: #E2E8F0;
+}
+
+/* ── Glass Card ── */
+.glass {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+}
+
+/* ── Glow Button ── */
+.btn-glow {
+  background: linear-gradient(135deg, #7C3AED, #4F46E5);
+  color: #fff;
+  border-radius: 0.5rem;
+  transition: box-shadow 0.2s, transform 0.15s;
+}
+.btn-glow:hover {
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.55);
+  transform: translateY(-1px);
+}
+.btn-glow:active {
+  transform: translateY(0);
+}
+
+/* ── Markdown reset ── */
+.reset-tw, .reset-tw * {
   all: revert !important;
 }
 
-.cl-drawerRoot{
+/* ── Clerk Drawer ── */
+.cl-drawerRoot {
   z-index: 10;
 }
+
+/* ── Spinner ── */
+@keyframes spin-glow {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  border: 2px solid rgba(167,139,250,0.3);
+  border-top-color: #A78BFA;
+  animation: spin-glow 0.7s linear infinite;
+}

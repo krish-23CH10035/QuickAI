@@ -1,7 +1,7 @@
 import React from 'react'
 import { Route, Routes } from 'react-router-dom'
 import Home from './pages/Home'
-import Dashsboard from './pages/Dashsboard'
+import Dashboard from './pages/Dashboard'
 import Community from './pages/Community'
 import BlogTitles from './pages/BlogTitles'
 import RemoveBackground from './pages/RemoveBackground'
@@ -23,7 +23,7 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path ='/ai' element ={<Layout />}> 
-          <Route index element ={<Dashsboard />} />
+          <Route index element ={<Dashboard />} />
           <Route path="community" element ={<Community />} />
           <Route path="blog-titles" element ={<BlogTitles />} />
           <Route path="remove-background" element ={<RemoveBackground />} />
