@@ -18,7 +18,10 @@ app.use(cors({
     credentials: true,
 }));
 app.use(express.json());
-app.use(clerkMiddleware());
+app.use(clerkMiddleware({
+    publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+    secretKey: process.env.CLERK_SECRET_KEY
+}));
 
 app.get('/', (req, res) => res.send('Server is Live'))
 
