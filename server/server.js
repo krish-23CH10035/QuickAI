@@ -14,7 +14,9 @@ console.log("==========================");
 // importing `cloudinary` configures the SDK (no async initialization required)
 
 app.use(cors({
-    origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+    origin: function (origin, callback) {
+        callback(null, true);
+    },
     credentials: true,
 }));
 app.use(express.json());
