@@ -22,7 +22,7 @@ const pdfParse = require('pdf-parse');
 
 // ── Groq (free, no credit card) — for text features ────────────────────────
 const AI = new OpenAI({
-    apiKey: process.env.GROQ_API_KEY,
+    apiKey: process.env.GROQ_API_KEY || 'missing_key_fallback_to_prevent_startup_crash',
     baseURL: "https://api.groq.com/openai/v1",
 });
 

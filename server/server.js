@@ -8,7 +8,9 @@ import userRouter from './routes/userRoutes.js';
 
 
 const app = express();
-
+console.log("=== RAILWAY ENV CHECK ===");
+console.log("ENV KEYS:", Object.keys(process.env).filter(k => !k.startsWith('npm_')));
+console.log("==========================");
 // importing `cloudinary` configures the SDK (no async initialization required)
 
 app.use(cors({
