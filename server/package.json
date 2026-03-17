@@ -8,6 +8,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
+    "dev": "nodemon server.js",
     "server": "nodemon --exec \"node --env-file=.env\" server.js",
     "start": "node server.js"
   },

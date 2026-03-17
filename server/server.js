@@ -8,6 +8,7 @@ import userRouter from './routes/userRoutes.js';
 
 
 const app = express();
+app.set('trust proxy', 1); // Trust Railway's load balancer for Clerk
 console.log("=== RAILWAY ENV CHECK ===");
 console.log("ENV KEYS:", Object.keys(process.env).filter(k => !k.startsWith('npm_')));
 console.log("==========================");
@@ -47,6 +48,16 @@ app.get('/api/stats', async (req, res) => {
   } catch (e) {
     res.json({ success: false, articles: 0, images: 0, users: 0 });
   }
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+    console.error("Global Error Handler caught:", err);
+    res.status(500).json({ 
+        success: false, 
+        message: err.message || "Internal Server Error",
+        error: process.env.NODE_ENV === 'production' ? {} : err.stack
+    });
 });
 
 // Export the Express app for Vercel serverless functions
